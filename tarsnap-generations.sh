@@ -80,13 +80,27 @@ then
 	exit 1
 fi
 
+#Check OS
+PLATFORM='unknown'
+unamestr=`uname`
+if [[ "$unamestr" == 'Linux' ]]; then
+   PLATFORM='linux'
+elif [[ "$unamestr" == 'FreeBSD' ]]; then
+   PLATFORM='freebsd'
+fi
+
+
 #Set some constants
 #The day of the week (Monday = 1, Sunday = 7)
 DOW=$($DATE_BIN +%u)
 #The calendar day of the month
 DOM=$($DATE_BIN +%d)
 #The last day of the current month
-LDOM=$($DATE_BIN -d "$($DATE_BIN +%y-%m-01) +1 month -1 day" +%d)
+if [[ $PLATFORM == 'freebsd' ]]; then
+  LDOM=$(echo $(cal -h) | awk '{print $NF}')
+else
+  LDOM=$($DATE_BIN -d "$($DATE_BIN +%y-%m-01) +1 month -1 day" +%d)
+fi
 #We need 'NOW' to be constant during execution, we set it here.
 NOW=$($DATE_BIN +%Y%m%d-%H)
 CUR_HOUR=$($DATE_BIN +%H)
@@ -150,10 +164,20 @@ for dir in $(cat $PATHS) ; do
 done
 
 #Delete old backups
-HOURLY_DELETE_TIME=$($DATE_BIN -d"-$HOURLY_CNT hour" +%Y%m%d-%H) 
-DAILY_DELETE_TIME=$($DATE_BIN -d"-$DAILY_CNT day" +%Y%m%d-%H)
-WEEKLY_DELETE_TIME=$($DATE_BIN -d"-$WEEKLY_CNT week" +%Y%m%d-%H)
-MONTHLY_DELETE_TIME=$($DATE_BIN -d"-$MONTHLY_CNT month" +%Y%m%d-%H)
+if [[ $PLATFORM == 'freebsd' ]]; then
+  HOURLY_DELETE_TIME=$($DATE_BIN -v-$HOURLY_CNT$"H" +%Y%m%d-%H) 
+  DAILY_DELETE_TIME=$($DATE_BIN -v-$DAILY_CNT$"d" +%Y%m%d-%H)
+  WEEKLY_DELETE_TIME=$($DATE_BIN -v-$WEEKLY_CNT$"w" +%Y%m%d-%H)
+  MONTHLY_DELETE_TIME=$($DATE_BIN -v-$MONTHLY_CNT$"m" +%Y%m%d-%H)
+else
+  HOURLY_DELETE_TIME=$($DATE_BIN -d"-$HOURLY_CNT hour" +%Y%m%d-%H) 
+  DAILY_DELETE_TIME=$($DATE_BIN -d"-$DAILY_CNT day" +%Y%m%d-%H)
+  WEEKLY_DELETE_TIME=$($DATE_BIN -d"-$WEEKLY_CNT week" +%Y%m%d-%H)
+  MONTHLY_DELETE_TIME=$($DATE_BIN -d"-$MONTHLY_CNT month" +%Y%m%d-%H)
+fi
+
+
+
 
 if [ $QUIET != "1" ] ; then
     echo "Finding backups to be deleted."
